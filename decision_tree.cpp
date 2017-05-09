@@ -133,6 +133,9 @@ void DecisionTree::expand(int index, vector<Datum> &data, vector<int> &labels){
     }
     tree.push_back(right);
 
+    q.push_back(left.ind);
+    q.push_back(right.ind);
+
     tree[index].child[0] = left.ind;
     tree[index].child[1] = right.ind;
     tree[index].fid = best_f;
@@ -142,7 +145,7 @@ void DecisionTree::expand(int index, vector<Datum> &data, vector<int> &labels){
 
 }
 
-void DecisionTree::print_tree(){
+void DecisionTree::print_tree(vector<int> &labels){
     deque<int> tempq;
     tempq.push_back(0);
     int lvl = 0;
@@ -156,7 +159,7 @@ void DecisionTree::print_tree(){
             Node temp = tree[ind];
             printf("Node %d id_list: ", temp.ind);
             for(int j=0; j<temp.id_list.size(); j++){
-                printf("%d, ", temp.id_list[j]);
+                printf("%d(%d), ", temp.id_list[j], labels[temp.id_list[j]]);
             }
             if(temp.child[0] != -1){
                 tempq.push_back(temp.child[0]);
@@ -195,7 +198,7 @@ int main(int arvc, char **argv){
 
     vector< vector<float> > testdata;
     vector<int> labels;
-    for (int i=0; i<10; i++){
+    for (int i=0; i<50; i++){
         vector<float> temp;
         for (int j=0; j<5; j++){
             float f = get_rand();
@@ -209,7 +212,7 @@ int main(int arvc, char **argv){
             labels.push_back(0);
         }
     }
-    print_data(testdata, labels);
+    // print_data(testdata, labels);
 
     printf("------------------------------------\n");
     printf("Start building decision tree\n");
@@ -221,11 +224,11 @@ int main(int arvc, char **argv){
         temp.label = labels[i];
         input.push_back(temp);
     }
-    DecisionTree *t = new DecisionTree(input, labels, 2);
+    DecisionTree *t = new DecisionTree(input, labels, 3);
 
     printf("------------------------------------\n");
     printf("Finish building decision tree\n");
 
-    t->print_tree();
+    t->print_tree(labels);
 
 }

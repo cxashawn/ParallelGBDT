@@ -40,7 +40,7 @@ public:
     DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth);
     ~DecisionTree();
 
-    void print_tree();
+    void print_tree(vector<int> &labels);
 
 private:
     void expand(int index, vector<Datum> &data, vector<int> &labels);
