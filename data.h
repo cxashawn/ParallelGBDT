@@ -1,3 +1,7 @@
+/*
+ * Currently not using this, reserve for future data abstractions
+ *
+*/
 #ifndef _DATA_H_
 #define _DATA_H_
 
