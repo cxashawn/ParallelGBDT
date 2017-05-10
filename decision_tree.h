@@ -28,22 +28,33 @@ struct Fval{
     int label;
 };
 
+struct splitInfo{
+    // int child[2];
+    int fid;
+    float fval;
+    vector<vector<int> > ch_id_lists;
+};
+
 class DecisionTree{
 
 public:
     int maxDepth;
     int n;
     int m;
+    int nThreads;
 
     vector<Node> tree;
-    deque<int> q;
-    DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth);
+    vector<splitInfo> split_q;
+    vector<int> q;
+
+    DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth, const int n_threads);
     ~DecisionTree();
 
     void print_tree(vector<int> &labels);
 
 private:
     void expand(int index, vector<Datum> &data, vector<int> &labels);
+    void updateTree();
 
 
     // float predict();

@@ -1,6 +1,14 @@
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <vector>
+using namespace std;
+
+struct info{
+    int id;
+    vector<int> list;
+};
 
 int main(int argc, char **argv){
 
@@ -15,9 +23,17 @@ int main(int argc, char **argv){
 
     printf("Result is %.4f\n", ret);
 
+    vector<info> v;
+    // v.reserve(256);
+    // v.resize(0);
+
+    // v.push_back(4);
+
+
+    // printf("V4: %d, v's size: %d\n", v[4], v.size());
+
+
     return 1;
-
-
 
     int cnt = 20;
     while(cnt-- > 0){
