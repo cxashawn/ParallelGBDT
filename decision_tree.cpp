@@ -4,14 +4,29 @@
 #include <float.h>
 #include <algorithm>
 #include <math.h>
+#include <omp.h>
 #include "decision_tree.h"
 using namespace std;
 
-DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth){
+DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth, const int n_threads){
 
     n = data.size();
     m = data.size() > 0 ? data[0].f.size() : 0;
     maxDepth = max_depth;
+    nThreads = n_threads > 1 ? n_threads : 1;
+
+    q.reserve(256);
+    q.resize(0);
+
+
+    omp_set_num_threads(nThreads);
+
+    #pragma omp parallel
+    {
+        this->nThreads = omp_get_num_threads();
+    }
+
+    printf("Number of threads: %d\n", this->nThreads);
 
     Node root;
     root.ind = 0;
@@ -28,11 +43,16 @@ DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int m
 
     for(int i=1; i<maxDepth; i++){
         int size = q.size();
+        split_q.resize(size);
+        // TODO: Parallel here
+        #pragma omp parallel for schedule(dynamic, 1)
         for (int j=0; j<size; j++){
-            int index = q.front();
-            q.pop_front();
-            this->expand(index, data, labels);
+            // int index = q.front();
+            // q.pop_front();
+            this->expand(j, data, labels);
         }
+        // TODO: adding updateTree func
+        this->updateTree();
     }
 }
 
@@ -59,7 +79,9 @@ float info_gain(int left[2], int right[2], int sum[2]){
     return (sum_score - avg_ch_score);
 }
 
-void DecisionTree::expand(int index, vector<Datum> &data, vector<int> &labels){
+void DecisionTree::expand(int idx, vector<Datum> &data, vector<int> &labels){
+
+    int index = q[idx];
 
     printf("Expand Node %d\n", tree[index].ind);
     int best_split = -1;
@@ -113,35 +135,85 @@ void DecisionTree::expand(int index, vector<Datum> &data, vector<int> &labels){
         printf("Error happens when splitting!\n");
         abort();
     }
-    Node left;
-    left.ind = tree.size();
-    left.split_val = -1;
-    left.fid = -1;
-    left.child[0] = -1; left.child[1] = -1;
-    for(int i=0; i<=best_split; i++){
-        left.id_list.push_back(templist[i].id);
+    // Node left;
+    // left.ind = tree.size();
+    // left.split_val = -1;
+    // left.fid = -1;
+    // left.child[0] = -1; left.child[1] = -1;
+    // for(int i=0; i<=best_split; i++){
+    //     left.id_list.push_back(templist[i].id);
+    // }
+    // tree.push_back(left);
+
+    //TODO: using splitInfo func
+    split_q[idx].fid = best_f;
+    split_q[idx].fval = templist[best_split].val;
+    vector<int> left;
+    vector<int> right;
+
+    for (int i=0; i<=best_split; i++){
+        left.push_back(templist[i].id);
     }
-    tree.push_back(left);
-
-    Node right;
-    right.ind = tree.size();
-    right.split_val = -1;
-    right.fid = -1;
-    right.child[0] = -1; right.child[1] = -1;
-    for(int i=best_split+1; i<templist.size(); i++){
-        right.id_list.push_back(templist[i].id);
+    split_q[idx].ch_id_lists.push_back(left);
+    for (int i=best_split+1; i<templist.size(); i++){
+        right.push_back(templist[i].id);
     }
-    tree.push_back(right);
+    split_q[idx].ch_id_lists.push_back(right);
+    // Node right;
+    // right.ind = tree.size();
+    // right.split_val = -1;
+    // right.fid = -1;
+    // right.child[0] = -1; right.child[1] = -1;
+    // for(int i=best_split+1; i<templist.size(); i++){
+    //     right.id_list.push_back(templist[i].id);
+    // }
+    // tree.push_back(right);
 
-    q.push_back(left.ind);
-    q.push_back(right.ind);
+    // q.push_back(left.ind);
+    // q.push_back(right.ind);
 
-    tree[index].child[0] = left.ind;
-    tree[index].child[1] = right.ind;
-    tree[index].fid = best_f;
-    tree[index].split_val = templist[best_split].val;
+    // tree[index].child[0] = left.ind;
+    // tree[index].child[1] = right.ind;
+    // tree[index].fid = best_f;
+    // tree[index].split_val = templist[best_split].val;
 
-    printf("Finish Expand Node %d\n", tree[index].ind);
+    printf("Finish Expand Node %d\n", index);
+
+}
+
+// TODO:
+void DecisionTree::updateTree(){
+
+    int size = q.size();
+
+    vector<int> new_q;
+
+    for(int i=0; i<size; i++){
+        int index = q[i];
+        tree[index].fid = split_q[i].fid;
+        tree[index].split_val = split_q[i].fval;
+
+        Node left;
+        left.ind = tree.size();
+        left.fid = -1; left.split_val = -1;
+        left.child[0] = -1; left.child[1] = -1;
+        left.id_list = split_q[i].ch_id_lists[0];
+
+        Node right;
+        right.ind = tree.size() + 1;
+        right.fid = -1; right.split_val = -1;
+        right.child[0] = -1; right.child[1] = -1;
+        right.id_list = split_q[i].ch_id_lists[1];
+
+        tree[index].child[0] = left.ind;
+        tree[index].child[1] = right.ind;
+
+        tree.push_back(left);
+        tree.push_back(right);
+        new_q.push_back(left.ind);
+        new_q.push_back(right.ind);
+    }
+    q = new_q;
 
 }
 
@@ -192,7 +264,6 @@ void print_data(vector<vector<float> > &d, vector<int> &l){
 
 int main(int arvc, char **argv){
 
-
     printf("------------------------------------\n");
     printf("Test input data\n");
 
@@ -224,11 +295,10 @@ int main(int arvc, char **argv){
         temp.label = labels[i];
         input.push_back(temp);
     }
-    DecisionTree *t = new DecisionTree(input, labels, 3);
+    DecisionTree *t = new DecisionTree(input, labels, 3, 2);
 
     printf("------------------------------------\n");
     printf("Finish building decision tree\n");
-
     t->print_tree(labels);
 
 }

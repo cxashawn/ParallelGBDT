@@ -1,3 +1,3 @@
 #!/bin/bash
 
-g++ decision_tree.cpp -o gbdt
+g++ -fopenmp decision_tree.cpp -o gbdt
