@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include <float.h>
 #include <algorithm>
@@ -7,6 +8,8 @@
 #include <omp.h>
 #include "decision_tree.h"
 using namespace std;
+
+double total_time = 0.0;
 
 DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int max_depth, const int n_threads){
 
@@ -17,7 +20,6 @@ DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int m
 
     q.reserve(256);
     q.resize(0);
-
 
     omp_set_num_threads(nThreads);
 
@@ -45,12 +47,14 @@ DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int m
         int size = q.size();
         split_q.resize(size);
         // TODO: Parallel here
-        #pragma omp parallel for schedule(dynamic, 1)
+        // #pragma omp parallel for schedule(dynamic, 1)
+        double start_time = get_time();
         for (int j=0; j<size; j++){
             // int index = q.front();
             // q.pop_front();
             this->expand(j, data, labels);
         }
+        total_time += get_time() - start_time;
         // TODO: adding updateTree func
         this->updateTree();
     }
@@ -79,16 +83,33 @@ float info_gain(int left[2], int right[2], int sum[2]){
     return (sum_score - avg_ch_score);
 }
 
+struct FeatureInfo{
+    int b_split;
+    int b_f;
+    float b_ig;
+};
+
+bool compFinfo(FeatureInfo f1, FeatureInfo f2) {return (f1.b_ig > f2.b_ig);}
+
+
 void DecisionTree::expand(int idx, vector<Datum> &data, vector<int> &labels){
 
     int index = q[idx];
 
-    printf("Expand Node %d\n", tree[index].ind);
-    int best_split = -1;
-    float best_ig = FLT_MIN;
-    int best_f = -1;
+    // printf("Expand Node %d\n", tree[index].ind);
+    // int best_split = -1;
+    // float best_ig = FLT_MIN;
+    // int best_f = -1;
+    vector<FeatureInfo> ft_info;
+    ft_info.reserve(m);
+    ft_info.resize(0);
+
+    #pragma omp parallel for schedule(dynamic, 1)
     for(int k=0; k<m; k++){
         // printf("Check feature %d\n", k);
+        float local_b_ig = FLT_MIN;
+        int local_b_split = -1;
+
         vector<Fval> templist;
         for(int i=0; i<tree[index].id_list.size(); i++){
             Fval temp;
@@ -112,14 +133,24 @@ void DecisionTree::expand(int idx, vector<Datum> &data, vector<int> &labels){
             left[templist[i].label]++;
             right[templist[i].label]--;
             float temp_ig = info_gain(left, right, sum);
-            if(temp_ig > best_ig){
-                best_ig = temp_ig;
-                best_split = i;
-                best_f = k;
+            if(temp_ig > local_b_ig){
+                local_b_ig = temp_ig;
+                local_b_split = k;
+                // best_f = k;
             }
         }
+        ft_info[k].b_ig = local_b_ig;
+        ft_info[k].b_split = local_b_split;
+        ft_info[k].b_f = k;
         // printf("Current best info gain%.4f\n", best_ig);
     }
+
+    sort(ft_info.begin(), ft_info.begin()+m, compFinfo);
+
+    float best_ig = ft_info[0].b_ig;
+    int best_f = ft_info[0].b_f;
+    int best_split = ft_info[0].b_split;
+
 
     vector<Fval> templist;
     for(int i=0; i<tree[index].id_list.size(); i++){
@@ -177,11 +208,10 @@ void DecisionTree::expand(int idx, vector<Datum> &data, vector<int> &labels){
     // tree[index].fid = best_f;
     // tree[index].split_val = templist[best_split].val;
 
-    printf("Finish Expand Node %d\n", index);
+    // printf("Finish Expand Node %d\n", index);
 
 }
 
-// TODO:
 void DecisionTree::updateTree(){
 
     int size = q.size();
@@ -262,16 +292,25 @@ void print_data(vector<vector<float> > &d, vector<int> &l){
     }
 }
 
-int main(int arvc, char **argv){
+int main(int argc, char **argv){
 
     printf("------------------------------------\n");
     printf("Test input data\n");
 
+    if (argc < 2) {
+        printf("SHOULD BE: ./gbdt_ft #ofThreads\n");
+        abort();
+    }
+
+    int n_thds = atoi(argv[1]);
+
+
+
     vector< vector<float> > testdata;
     vector<int> labels;
-    for (int i=0; i<50; i++){
+    for (int i=0; i<100000; i++){
         vector<float> temp;
-        for (int j=0; j<5; j++){
+        for (int j=0; j<50; j++){
             float f = get_rand();
             temp.push_back(f);
         }
@@ -295,10 +334,11 @@ int main(int arvc, char **argv){
         temp.label = labels[i];
         input.push_back(temp);
     }
-    DecisionTree *t = new DecisionTree(input, labels, 3, 2);
+    DecisionTree *t = new DecisionTree(input, labels, 4, n_thds);
 
     printf("------------------------------------\n");
     printf("Finish building decision tree\n");
-    t->print_tree(labels);
+    printf("Total parallel time is %.4f\n", total_time);
+    // t->print_tree(labels);
 
 }
