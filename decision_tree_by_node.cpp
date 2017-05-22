@@ -49,6 +49,7 @@ DecisionTree::DecisionTree(vector<Datum> &data, vector<int> &labels, const int m
         for (int j=0; j<size; j++){
             // int index = q.front();
             // q.pop_front();
+
             this->expand(j, data, labels);
         }
         // TODO: adding updateTree func
@@ -83,6 +84,10 @@ float info_gain(int left[2], int right[2], int sum[2]){
 void DecisionTree::expand(int idx, vector<Datum> &data, vector<int> &labels){
 
     int index = q[idx];
+
+    if (tree[index].id_list.size() <= 1) {
+        return;
+    }
 
     // printf("Expand Node %d\n", tree[index].ind);
     int best_split = -1;
@@ -276,9 +281,9 @@ int main(int argc, char **argv){
 
     vector< vector<float> > testdata;
     vector<int> labels;
-    for (int i=0; i<100000; i++){
+    for (int i=0; i<50000; i++){
         vector<float> temp;
-        for (int j=0; j<50; j++){
+        for (int j=0; j<40; j++){
             float f = get_rand();
             temp.push_back(f);
         }

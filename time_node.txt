@@ -1,0 +1,40 @@
+Method 1 Parallel By Nodes
+
+setting: CIMS Crunchy server.
+
+4 AMD Opteron 6272 (64 Cores)
+256G Memory
+
+
+1. strong scaling:
+
+ 
+40 Attributes, tree depth is 6, total 10 trees
+
+Training samples        Thread          Time
+20000                   1               49.6579
+20000                   2               31.3281
+20000                   4               25.9694
+20000                   8               25.8592
+20000                   16              26.0681
+20000                   32              26.0427
+20000                   64              26.4279
+20000                   128             26.3712
+
+
+2. Weak Scaling
+40 Attributes, tree depth is 6, total 10 trees
+
+
+Training samples        Thread          Time
+1000                    1               1.0714
+2000                    2               2.1498
+4000                    4               4.7732
+8000                    8               9.9690
+16000                   16              18.3159
+32000                   32              31.6287
+64000                   64              71.6319
+128000                  128             235.4582
+
+
+

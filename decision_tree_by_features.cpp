@@ -297,12 +297,14 @@ int main(int argc, char **argv){
     printf("------------------------------------\n");
     printf("Test input data\n");
 
-    if (argc < 2) {
-        printf("SHOULD BE: ./gbdt_ft #ofThreads\n");
+    if (argc < 4) {
+        printf("SHOULD BE: ./gbdt_ft #ofSamples #ofFeatures #ofThreads\n");
         abort();
     }
 
-    int n_thds = atoi(argv[1]);
+    int n_samples = atoi(argv[1]);
+    int n_fts = atoi(argv[2]);
+    int n_thds = atoi(argv[3]);
 
 
 
